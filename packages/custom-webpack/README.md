@@ -1,0 +1,700 @@
+# Custom webpack [builders](#builders) for Angular build facade
+
+[![npm version](https://img.shields.io/npm/v/@angular-builders/custom-webpack.svg) ![npm (tag)](https://img.shields.io/npm/v/@angular-builders/custom-webpack/next.svg) ![npm](https://img.shields.io/npm/dm/@angular-builders/custom-webpack.svg)](https://www.npmjs.com/package/@angular-builders/custom-webpack)
+
+Allow customizing build configuration without ejecting webpack configuration (`ng eject`)
+
+# Table of Contents
+
+- [Usage](#usage)
+  - [Manual setup](#manual-setup)
+  - [For Example](#for-example)
+- [Updating](#updating)
+- [Builders](#builders)
+  - [Custom Webpack `browser`](#custom-webpack-browser)
+  - [Custom Webpack `dev-server`](#custom-webpack-dev-server)
+    - [Example](#example)
+  - [Custom Webpack `server`](#custom-webpack-server)
+  - [Custom Webpack `karma`](#custom-webpack-karma)
+  - [Custom Webpack `extract-i18n`](#custom-webpack-extract-i18n)
+    - [Example](#example-1)
+- [Custom Webpack Config Object](#custom-webpack-config-object)
+  - [Merging Plugins Configuration:](#merging-plugins-configuration)
+  - [Custom Webpack Promisified Config](#custom-webpack-promisified-config)
+  - [Custom Webpack Config Function](#custom-webpack-config-function)
+- [Index Transform](#index-transform)
+  - [Example](#example-2)
+  - [Type-checking TypeScript configs and transforms](#type-checking-typescript-configs-and-transforms)
+- [ES Modules (ESM) Support](#es-modules-esm-support)
+- [Verbose Logging](#verbose-logging)
+- [Further Reading](#further-reading)
+
+# This documentation is for the latest major version only
+
+> ⚠️ **Version alignment:** The major version of `@angular-builders/custom-webpack` must match the major version of `@angular/core` in your project. For example, Angular 19 requires `@angular-builders/custom-webpack@19.x`, Angular 20 requires `@angular-builders/custom-webpack@20.x`, etc. Using a mismatched version is the most common source of issues.
+
+## Previous versions
+
+<details>
+  <summary>Click to expand</summary>
+
+- [Version 21](https://github.com/just-jeb/angular-builders/blob/21.x.x/packages/custom-webpack/README.md)
+- [Version 20](https://github.com/just-jeb/angular-builders/blob/20.x.x/packages/custom-webpack/README.md)
+- [Version 19](https://github.com/just-jeb/angular-builders/blob/19.x.x/packages/custom-webpack/README.md)
+- [Version 18](https://github.com/just-jeb/angular-builders/blob/18.x.x/packages/custom-webpack/README.md)
+- [Version 17](https://github.com/just-jeb/angular-builders/blob/17.x.x/packages/custom-webpack/README.md)
+- [Version 16](https://github.com/just-jeb/angular-builders/blob/16.x.x/packages/custom-webpack/README.md)
+- [Version 15](https://github.com/just-jeb/angular-builders/blob/15.x.x/packages/custom-webpack/README.md)
+- [Version 14](https://github.com/just-jeb/angular-builders/blob/14.x.x/packages/custom-webpack/README.md)
+- [Version 13](https://github.com/just-jeb/angular-builders/blob/13.x.x/packages/custom-webpack/README.md)
+- [Version 12](https://github.com/just-jeb/angular-builders/blob/12.x.x/packages/custom-webpack/README.md)
+- [Version 11](https://github.com/just-jeb/angular-builders/blob/11.x.x/packages/custom-webpack/README.md)
+- [Version 10](https://github.com/just-jeb/angular-builders/blob/10.x.x/packages/custom-webpack/README.md)
+- [Version 9](https://github.com/just-jeb/angular-builders/blob/9.x.x/packages/custom-webpack/README.md)
+- [Version 8](https://github.com/just-jeb/angular-builders/blob/8.x.x/packages/custom-webpack/README.md)
+- [Version 7](https://github.com/just-jeb/angular-builders/blob/7.x.x/packages/custom-webpack/README.md)
+
+</details>
+
+## Which package do you need?
+
+Look at the `build` target in your `angular.json`. If it names a webpack builder such as `@angular-devkit/build-angular:browser`, this is the right package.
+
+Applications generated since Angular 17 use the esbuild-based `application` builder (`@angular/build:application` in current versions), and those builds have no webpack configuration to customize. Those workspaces want [`@angular-builders/custom-esbuild`](https://www.npmjs.com/package/@angular-builders/custom-esbuild), which exposes esbuild plugins and an index transform the way this package exposes a webpack config.
+
+Webpack is still fully supported here, and a great many workspaces are still built with it.
+
+## Prerequisites:
+
+- [Angular CLI 22](https://www.npmjs.com/package/@angular/cli)
+
+# Usage
+
+```
+ng add @angular-builders/custom-webpack
+```
+
+This adds `@angular-builders/custom-webpack` as a dev dependency and installs it, then rewires your project's `build` and `serve` targets (whichever exist) to the `custom-webpack` builders, keeping their existing options intact. If neither a `customWebpackConfig` option nor a webpack config already sits at your workspace root, it also scaffolds an empty `webpack.config.js` there and points `build` at it.
+
+In a workspace with more than one project, pass `--project`:
+
+```
+ng add @angular-builders/custom-webpack --project my-app
+```
+
+Without it, a single-project workspace is configured automatically; a multi-project workspace falls back to `defaultProject`, or configures every project if that isn't set either.
+
+Two things worth knowing before you run it:
+
+- It does not check what builder your `build` target was already using. If that target was on `@angular/build:application` (the esbuild builder), `ng add` overwrites it with `custom-webpack` anyway, and you're left to reconcile the two setups yourself.
+- If a webpack config file already exists at the workspace root but nothing in `angular.json` points `customWebpackConfig` at it, the schematic leaves both the file and your config untouched — you'll need to wire `customWebpackConfig` up by hand.
+
+It never touches your `test` target, so a project running Karma keeps running Karma, and running the schematic again is safe — it just picks up from whatever's already configured.
+
+## Manual setup
+
+`ng add` does the above automatically; this is what to do if you'd rather set it up by hand, or need to understand what the schematic changed.
+
+1.  `npm i -D @angular-builders/custom-webpack`
+2.  In your `angular.json`:
+    ```js
+    "projects": {
+      ...
+      "[project]": {
+        ...
+        "architect": {
+          ...
+          "[architect-target]": {
+            "builder": "@angular-builders/custom-webpack:[browser|server|karma|dev-server|extract-i18n]",
+            "options": {
+              ...
+            }
+    ```
+    Where:
+    - [project] is the name of the project to which you want to add the builder
+    - [architect-target] is the name of build target you want to run (build, serve, test etc. or any custom target)
+    - [browser|server|karma|dev-server|extract-i18n] one of the supported builders - [browser](#Custom-webpack-browser), [server](#Custom-webpack-server), [karma](#Custom-webpack-Karma), [dev-server](#Custom-webpack-dev-server) or [extract-i18n](#Custom-webpack-extract-i18n)
+3.  If `[architect-target]` is not one of the predefined targets (like build, serve, test etc.) then run it like this:  
+    `ng run [project]:[architect-target]`  
+    If it is one of the predefined targets, you can run it with `ng [architect-target]`
+
+## For Example
+
+- angular.json:
+  ```js
+  "projects": {
+    ...
+    "example-app": {
+      ...
+      "architect": {
+        ...
+        "build": {
+          "builder": "@angular-builders/custom-webpack:browser",
+          "options": {
+            ...
+          }
+  ```
+- Run the build: `ng build`
+
+# Updating
+
+```
+ng update @angular-builders/custom-webpack
+```
+
+Version 22 replaces `ts-node` with [jiti](https://github.com/unjs/jiti) for loading TypeScript webpack configs and index transforms. The migration cleans up the old setup for you: it strips the `ts-node/esm` loader workaround out of your npm scripts, removes the `ts-node` and `tsconfig-paths` devDependencies, and lifts path-mapping options out of a `ts-node` tsconfig section into `compilerOptions`. Full details are in the [migration guide](https://github.com/just-jeb/angular-builders/blob/master/MIGRATION.MD).
+
+The one thing it can't automate: from here, these files are transpiled without type-checking — see [Type-checking TypeScript configs and transforms](#type-checking-typescript-configs-and-transforms) for what that means and how to get it back in CI.
+
+Updating from version 17 or later is supported, and every migration between your installed version and the target runs in a single `ng update` pass.
+
+`@angular-builders/custom-webpack@22` peer-depends on Angular 22, so the project needs to already be on Angular 22 before this update applies. The migration above only covers the builder's own setup. Getting Angular itself to 22 is a step `ng update @angular-builders/custom-webpack` doesn't do for you.
+
+# Builders
+
+- [@angular-builders/custom-webpack:browser](#Custom-webpack-browser)
+- [@angular-builders/custom-webpack:server](#Custom-webpack-server)
+- [@angular-builders/custom-webpack:karma](#Custom-webpack-Karma)
+- [@angular-builders/custom-webpack:dev-server](#Custom-webpack-dev-server)
+- [@angular-builders/custom-webpack:extract-i18n](#Custom-webpack-extract-i18n)
+
+## Custom Webpack `browser`
+
+Extended `@angular-devkit/build-angular:browser` builder that allows to specify additional webpack configuration (on top of the existing under the hood) and `index.html` transformations.
+The builder will run the same build as `@angular-devkit/build-angular:browser` does with extra parameters that are specified in the provided webpack configuration. It will also run transformation on `index.html` if specified.
+
+Builder options:
+
+- All the `@angular-devkit/build-angular:browser` options
+- `customWebpackConfig`: [see below](#custom-webpack-config-object)
+- `indexTransform`: [see below](#index-transform)
+
+`angular.json` Example:
+
+```js
+"architect": {
+  ...
+  "build": {
+    "builder": "@angular-builders/custom-webpack:browser",
+    "options": {
+      "customWebpackConfig": {
+        "path": "./extra-webpack.config.js",
+        "mergeRules": {
+          "externals": "replace"
+        }
+      },
+      "indexTransform": "./index-html-transform.js",
+      "outputPath": "dist/my-cool-client",
+      "index": "src/index.html",
+      "main": "src/main.ts",
+      "polyfills": ["zone.js"],
+      "tsConfig": "src/tsconfig.app.json"
+    }
+```
+
+In this example `externals` entry from `extra-webpack.config.js` will replace `externals` entry from Angular CLI underlying webpack config while all the rest will be appended. In addition `index.html` will be modified by the function exported from `./index-html-transform.js`.
+
+## Custom Webpack `dev-server`
+
+Enhanced `@angular-devkit/build-angular:dev-server` builder that leverages the custom webpack builder to get webpack configuration.
+
+Unlike the default `@angular-devkit/build-angular:dev-server` it doesn't use `@angular-devkit/build-angular:browser` configuration to run the dev server. Instead it uses `customWebpackConfiguration` from `browserTarget` and runs custom webpack dev server build.
+
+Thus, if you use `@angular-builders/custom-webpack:dev-server` along with `@angular-builders/custom-webpack:browser`, `ng serve` will run with custom configuration provided in the latter.
+
+### Example
+
+`angular.json`:
+
+```js
+"architect": {
+  ...
+  "build": {
+    "builder": "@angular-builders/custom-webpack:browser",
+    "options": {
+      "customWebpackConfig": {
+         "path": "./extra-webpack.config.js"
+      },
+      ...
+    }
+  },
+  "serve": {
+    "builder": "@angular-builders/custom-webpack:dev-server",
+    "options": {
+      "buildTarget": "my-project:build"
+    }
+  }
+```
+
+In this example `dev-server` will use `custom-webpack:browser` builder, hence modified webpack config, when invoking the serve target.
+
+## Custom Webpack `server`
+
+Extended `@angular-devkit/build-angular:server` builder that allows to specify additional webpack configuration (on top of the existing under the hood) and `index.html` transformations.
+The builder will run the same build as `@angular-devkit/build-angular:server` does with extra parameters that are specified in the provided webpack configuration.
+
+Builder options:
+
+- All the `@angular-devkit/build-angular:server` options
+- `customWebpackConfig`: [see below](#custom-webpack-config-object)
+
+`angular.json` Example:
+
+```js
+"architect": {
+  ...
+  "build": {
+    "builder": "@angular-builders/custom-webpack:server",
+    "options": {
+      "customWebpackConfig": {
+        "path": "./extra-webpack.config.js",
+        "mergeRules": {
+          "module": {
+            "rules": "prepend"
+          }
+        },
+        "replaceDuplicatePlugins": true
+      },
+      "outputPath": "dist/my-cool-server",
+      "main": "src/main.server.ts",
+      "tsConfig": "src/tsconfig.server.json"
+    }
+```
+
+In this example `module.rules` entry from `extra-webpack.config.js` will be prepended to `module.rules` entry from Angular CLI underlying webpack config while all the rest will be appended.
+Since loaders are evaluated [from right to left](https://webpack.js.org/concepts/loaders/#configuration) this will effectively mean that the loaders you define in your custom configuration will be applied **after** the loaders defined by Angular CLI.
+
+## Custom Webpack `karma`
+
+Extended `@angular-devkit/build-angular:karma` builder that allows to specify additional webpack configuration (on top of the existing under the hood) and `index.html` transformations.
+The builder will run the same build as `@angular-devkit/build-angular:karma` does with extra parameters that are specified in the provided webpack configuration.
+
+Builder options:
+
+- All the `@angular-devkit/build-angular:karma` options
+- `customWebpackConfig`: [see below](#custom-webpack-config-object)
+
+`angular.json` Example:
+
+```js
+"architect": {
+  ...
+  "test": {
+    "builder": "@angular-builders/custom-webpack:karma",
+    "options": {
+      "customWebpackConfig": {
+        "path": "./extra-webpack.config.js"
+      },
+      "main": "src/test.ts",
+      "polyfills": ["zone.js"],
+      "tsConfig": "src/tsconfig.spec.json",
+      "karmaConfig": "src/karma.conf.js",
+    }
+```
+
+External `karma.conf.js` configuration:
+
+Angular 22 deprecates Karma but keeps it running, and for webpack projects it still ships as its own dedicated builder, `@angular-devkit/build-angular:karma` — the one `@angular-builders/custom-webpack:karma` wraps. (Angular 22 also introduces a unified `@angular/build:unit-test` builder that picks Karma or Vitest via `options.runner`, but that's the esbuild path; it doesn't apply here.)
+
+An issue present since Angular v20 still applies: generating an [external karma config](https://angular.dev/guide/testing#configuration) causes tests to hang under `@angular-builders/custom-webpack:karma`.
+
+Fix this by:
+
+- adding `'@angular-devkit/build-angular'` to the `frameworks` array
+- adding `'@angular-devkit/build-angular/plugins/karma'` to the `plugins` array
+
+`karma.conf.js` example:
+
+```js
+module.exports = function (config) {
+  config.set({
+    basePath: '',
+    frameworks: ['jasmine', '@angular-devkit/build-angular'],
+    plugins: [
+      require('karma-jasmine'),
+      require('karma-chrome-launcher'),
+      require('karma-jasmine-html-reporter'),
+      require('karma-coverage'),
+      require('@angular-devkit/build-angular/plugins/karma'),
+    ],
+    // ...
+```
+
+## Custom Webpack `extract-i18n`
+
+Enhanced `@angular-devkit/build-angular:extract-i18n` builder that leverages the custom webpack builder to get webpack configuration.
+
+The builder uses `customWebpackConfiguration` from `browserTarget` to run the extraction process while taking into account changes in your custom webpack config.
+
+Thus, if you use `@angular-builders/custom-webpack:extract-i18n` along with `@angular-builders/custom-webpack:browser`, `ng extract-i18n` will run with custom configuration provided in the latter.
+
+### Example
+
+`angular.json`:
+
+```js
+"architect": {
+  ...
+  "build": {
+    "builder": "@angular-builders/custom-webpack:browser",
+    "options": {
+      "customWebpackConfig": {
+         "path": "./extra-webpack.config.js"
+      },
+      ...
+    }
+  },
+  "extract-i18n": {
+    "builder": "@angular-builders/custom-webpack:extract-i18n",
+    "options": {
+      "buildTarget": "my-project:build"
+    }
+  }
+```
+
+In this example `extract-i18n` will use `custom-webpack:browser` builder, hence modified webpack config, when invoking the extract-i18n target.
+
+# Custom Webpack Config Object
+
+This option defines your custom webpack configuration. If not specified at all, plain Angular build will run.  
+The following properties are available:
+
+- `path`: path to the extra webpack configuration, defaults to `webpack.config.js`.
+  The configuration file can export either an object or a function. If it is an object it shall contain only modifications and additions, you don't have to specify the whole webpack configuration.  
+  Thus, if you'd like to add some options to `style-loader` (which already there because of default Angular configuration), you only have to specify this part of the loader:
+  ```js
+  {
+    test: /\.css$/,
+    use: [
+      {
+        loader: 'style-loader',
+        options: {
+          // `style-loader` options here...
+        }
+      }
+    ]
+  }
+  ```
+  The builder will take care of merging the delta with the existing configuration provided by Angular.  
+  In more complicated cases you'd probably want to [use a function](#custom-webpack-config-function) instead of an object.
+- `mergeRules`: webpack config merge rules, as described [here](https://github.com/survivejs/webpack-merge#mergewithrules). Defaults to:
+
+  ```ts
+  {
+    module: {
+      rules: {
+        test: "match",
+        use: {
+          loader: "match",
+          options: "merge",
+        },
+      },
+    },
+  };
+  ```
+
+- `replaceDuplicatePlugins`: Defaults to `false`. If `true`, the plugins in custom webpack config will replace the corresponding plugins in default Angular CLI webpack configuration. If `false`, the [default behavior](#merging-plugins-configuration) will be applied.
+  **Note that if `true`, this option will override `mergeRules` for `plugins` field.**
+
+Webpack configuration can be also written in TypeScript. In this case, `customWebpackConfig.ts` is loaded with [jiti](https://github.com/unjs/jiti), using the application's `tsConfig` file for path resolution (see [Type-checking TypeScript configs and transforms](#type-checking-typescript-configs-and-transforms) for how type errors are handled). Given the following example:
+
+```ts
+// extra-webpack.config.ts
+import { Configuration } from 'webpack';
+
+export default {
+  output: {
+    library: 'shop',
+    libraryTarget: 'umd',
+  },
+} as Configuration;
+```
+
+Do not forget to specify the correct path to this file:
+
+```js
+"customWebpackConfig": {
+  "path": "./extra-webpack.config.ts"
+},
+```
+
+## Merging Plugins Configuration:
+
+If in your custom configuration you specify a plugin that is already added by Angular CLI then by default the two instances will be merged.  
+In case of the conflicts your configuration will override the existing one.  
+Thus, if you'd like to modify an existing plugin configuration, all you have to do is specify the _delta_ you want to change.  
+For example, if you'd like to allow cyclic dependencies that include dynamic imports you only have to specify this single entry:
+
+```js
+module.exports = {
+  plugins: [
+    new CircularDependencyPlugin({
+      allowAsyncCycles: true,
+    }),
+  ],
+};
+```
+
+Keep in mind though that if there are default values in the plugin's constructor, they would override the corresponding values in the existing instance. So these you have to set explicitly to the same values Angular sets.  
+You can check out an example for plugins merge in the [unit tests](./src/webpack-config-merger.spec.ts) and in [this](https://github.com/just-jeb/angular-builders/issues/13) issue.
+
+> **⚠️ Plugin identification and anonymous plugins**
+>
+> The builder identifies plugins by their **constructor name** (`plugin.constructor.name`) to decide whether two plugins are the "same" and should be merged or replaced.
+> This means:
+>
+> - **Named class plugins** (e.g., `new DefinePlugin(...)`, `new CircularDependencyPlugin(...)`) are identified correctly and participate in merge/replace logic as expected.
+> - **Plain object plugins** (e.g., `{ apply(compiler) { ... } }`) have `constructor.name === 'Object'` and are therefore **indistinguishable from each other**. The builder cannot tell one anonymous plugin from another, so it treats them all as the same plugin type.
+>
+> If you add a plain-object plugin in your custom config, it will **not** be deduplicated or merged with other plain-object plugins — all anonymous plugins (yours and Angular's) are preserved as-is.
+>
+> If you want your plugin to participate in merge or replace logic (e.g., override an existing plugin of the same kind), give it a named constructor:
+>
+> ```js
+> // ✅ Named — participates in deduplication and merge
+> class MyPlugin {
+>   apply(compiler) { ... }
+> }
+> module.exports = { plugins: [new MyPlugin()] };
+>
+> // ✅ Also named — constructor.name is 'MyPlugin'
+> function MyPlugin() {}
+> MyPlugin.prototype.apply = function(compiler) { ... };
+> module.exports = { plugins: [new MyPlugin()] };
+>
+> // ❌ Anonymous — constructor.name is 'Object', cannot be deduplicated or merged
+> module.exports = { plugins: [{ apply(compiler) { ... } }] };
+> ```
+>
+> For full control over the merge, use a [function export](#custom-webpack-config-function) — you receive the full base config and return a new one, bypassing automatic merge entirely.
+
+## Custom Webpack Promisified Config
+
+Webpack config can also export a `Promise` object that resolves custom config. Given the following example:
+
+```js
+// extra-webpack.config.js
+const fs = require('fs');
+const util = require('util');
+const webpack = require('webpack');
+
+const readFile = util.promisify(fs.readFile);
+
+module.exports = readFile('./LICENSE', {
+  encoding: 'utf-8',
+}).then(license => ({
+  plugins: [new webpack.BannerPlugin(license)],
+}));
+```
+
+In this case, the behavior will be the same as when exporting a plain object — the resolved configuration will be merged with the base one.
+
+## Custom Webpack Config Function
+
+If `customWebpackConfig.path` file exports a function, the behaviour of the builder changes : no more automatic merge is applied, instead the function
+is called with the base Webpack configuration and must return the new configuration.
+
+The function is called with the base config, the builder options, and the target options as parameters.
+`TargetOptions` follows `target` definition from [this](https://github.com/angular/angular-cli/blob/master/packages/angular_devkit/architect/src/input-schema.json) schema
+and can be used to manipulate your build based on the build target.
+
+In this case, `mergeRules` and `replaceDuplicatePlugins` options have no effect.
+
+`custom-webpack.config.js` example :
+
+```js
+const webpack = require('webpack');
+const pkg = require('./package.json');
+
+module.exports = (config, options, targetOptions) => {
+  config.plugins.push(
+    new webpack.DefinePlugin({
+      APP_VERSION: JSON.stringify(pkg.version),
+    })
+  );
+
+  return config;
+};
+```
+
+Alternatively, using TypeScript:
+
+```ts
+import { CustomWebpackBrowserSchema, TargetOptions } from '@angular-builders/custom-webpack';
+import * as webpack from 'webpack';
+import * as pkg from './package.json';
+
+export default (
+  config: webpack.Configuration,
+  options: CustomWebpackBrowserSchema,
+  targetOptions: TargetOptions
+) => {
+  config.plugins.push(
+    new webpack.DefinePlugin({
+      APP_VERSION: JSON.stringify(pkg.version),
+    })
+  );
+
+  return config;
+};
+```
+
+It's also possible to export an asynchronous factory (factory that returns a `Promise` object). Let's look at the following example:
+
+```js
+// extra-webpack.config.js
+const axios = require('axios');
+const webpack = require('webpack');
+
+async function getPortalVersion() {
+  const response = await axios.get('http://portal.com/version');
+  return response.data.version;
+}
+
+module.exports = async config => {
+  const version = await getPortalVersion();
+
+  config.plugins.push(
+    new webpack.DefinePlugin({
+      APP_VERSION: JSON.stringify(version),
+    })
+  );
+
+  return config;
+};
+```
+
+# Index Transform
+
+Since Angular 8 `index.html` is not generated as part of the Webpack build. If you want to modify your `index.html` you should use `indexTransform` option.  
+`indexTransform` is a path (relative to workspace root) to a `.js` or `.ts` file that exports transformation function for `index.html`.  
+Function signature is as following:
+If `indexTransform` is written in TypeScript, it is loaded with [jiti](https://github.com/unjs/jiti), using the application's `tsConfig` file for path resolution (see [Type-checking TypeScript configs and transforms](#type-checking-typescript-configs-and-transforms)).
+
+```typescript
+(options: TargetOptions, indexHtmlContent: string) => string | Promise<string>;
+```
+
+or, in other words, the function receives target options and original `index.html` content (generated by Angular CLI) and returns a new content as `string` or `Promise`.  
+`TargetOptions` follows `target` definition from [this](https://github.com/angular/angular-cli/blob/master/packages/angular_devkit/architect/src/input-schema.json) schema and looks like this:
+
+```typescript
+export interface Target {
+  configuration?: string;
+  project: string;
+  target: string;
+}
+```
+
+It is useful when you want to transform your `index.html` according to the build options.
+
+## Example
+
+`angular.json`:
+
+```js
+"architect": {
+  ...
+  "build": {
+    "builder": "@angular-builders/custom-webpack:browser",
+    "options": {
+      "indexTransform": "./index-html-transform.js"
+      ...
+    }
+```
+
+`index-html-transform.js`:
+
+```js
+module.exports = (targetOptions, indexHtml) => {
+  const i = indexHtml.indexOf('</body>');
+  const config = `<p>Configuration: ${targetOptions.configuration}</p>`;
+  return `${indexHtml.slice(0, i)}
+            ${config}
+            ${indexHtml.slice(i)}`;
+};
+```
+
+Alternatively, using TypeScript:
+
+```ts
+import { TargetOptions } from '@angular-builders/custom-webpack';
+
+export default (targetOptions: TargetOptions, indexHtml: string) => {
+  const i = indexHtml.indexOf('</body>');
+  const config = `<p>Configuration: ${targetOptions.configuration}</p>`;
+  return `${indexHtml.slice(0, i)}
+            ${config}
+            ${indexHtml.slice(i)}`;
+};
+```
+
+In the example we add a paragraph with build configuration to your `index.html`. It is a very simple example without any asynchronous code but you can also return a `Promise` from this function.
+
+Full example [here](../../examples/custom-webpack/full-cycle-app).
+
+### Type-checking TypeScript configs and transforms
+
+`customWebpackConfig` and `indexTransform` files written in TypeScript are loaded with [jiti](https://github.com/unjs/jiti) and **transpiled, not type-checked**, at build time. Your editor still type-checks them as you write, and TypeScript path aliases (`baseUrl`/`paths`) declared in the build target's `tsConfig` are honored.
+
+To enforce type-checking of these files in CI, add a dedicated tsconfig that includes them and run `tsc`:
+
+`tsconfig.build-config.json`:
+
+```jsonc
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["webpack.config.ts", "index-html-transform.ts"],
+}
+```
+
+```bash
+tsc --noEmit -p tsconfig.build-config.json
+```
+
+# ES Modules (ESM) Support
+
+Custom Webpack builder fully supports ESM.
+
+- If your app has `"type": "module"` both `custom-webpack.js` and `index-transform.js` will be treated as ES modules, unless you change their file extension to `.cjs`. In that case they'll be treated as CommonJS Modules. [Example](../../examples/custom-webpack/sanity-app-esm).
+- For `"type": "commonjs"` (or unspecified type) both `custom-webpack.js` and `index-transform.js` will be treated as CommonJS modules unless you change their file extension to `.mjs`. In that case they'll be treated as ES Modules. [Example](../../examples/custom-webpack/sanity-app).
+- **TypeScript configs and transforms work in both CommonJS and ESM projects with no extra setup** — just point the builder at your `.ts` file. Versions before 22 needed a `ts-node/esm` loader forced through `NODE_OPTIONS`; the [jiti migration](#updating) removes that workaround for you when you run `ng update`. TypeScript path aliases are supported in both module formats.
+
+# Verbose Logging
+
+Custom Webpack allows enabling verbose logging for configuration properties. This can be achieved by providing the `verbose` object in builder options. Given the following example:
+
+```json
+{
+  "builder": "@angular-builders/custom-webpack:browser",
+  "options": {
+    "customWebpackConfig": {
+      "verbose": {
+        "properties": ["entry"]
+      }
+    }
+  }
+}
+```
+
+`properties` is an array of strings that supports individual or deeply nested keys (`output.publicPath` and `plugins[0]` are valid keys). The number of times to recurse the object while formatting before it's logged is controlled by the `serializationDepth` property:
+
+```json
+{
+  "builder": "@angular-builders/custom-webpack:browser",
+  "options": {
+    "customWebpackConfig": {
+      "verbose": {
+        "properties": ["plugins[0]"],
+        "serializationDepth": 5
+      }
+    }
+  }
+}
+```
+
+# Further Reading
+
+- [Customizing Angular CLI build - an alternative to ng eject](https://medium.com/angular-in-depth/customizing-angular-cli-build-an-alternative-to-ng-eject-v2-c655768b48cc)
+- [Customizing the Angular CLI build](https://www.justjeb.com/post/customizing-angular-cli-build) — background from 2021 on why the builder layer exists and what it replaced. Its setup steps describe the manual path; [Usage](#usage) above covers `ng add`.

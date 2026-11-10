@@ -1,0 +1,327 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "my-first-app": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "projects/my-first-app/",
+      "sourceRoot": "projects/my-first-app/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/my-first-app",
+            "index": "projects/my-first-app/src/index.html",
+            "main": "projects/my-first-app/src/main.ts",
+            "polyfills": [],
+            "tsConfig": "projects/my-first-app/tsconfig.app.json",
+            "assets": [
+              "projects/my-first-app/src/favicon.ico",
+              "projects/my-first-app/src/assets"
+            ],
+            "styles": [
+              "projects/my-first-app/src/styles.css"
+            ],
+            "scripts": [],
+            "vendorChunk": true,
+            "extractLicenses": false,
+            "buildOptimizer": false,
+            "sourceMap": true,
+            "optimization": false,
+            "namedChunks": true
+          },
+          "configurations": {
+            "production": {
+              "fileReplacements": [
+                {
+                  "replace": "projects/my-first-app/src/environments/environment.ts",
+                  "with": "projects/my-first-app/src/environments/environment.prod.ts"
+                }
+              ],
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "namedChunks": false,
+              "extractLicenses": true,
+              "vendorChunk": false,
+              "buildOptimizer": true,
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "2mb",
+                  "maximumError": "5mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb"
+                }
+              ]
+            }
+          }
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "buildTarget": "my-first-app:build",
+            "port": 0
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "my-first-app:build:production"
+            }
+          }
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "buildTarget": "my-first-app:build"
+          }
+        },
+        "test": {
+          "builder": "@angular-builders/jest:run",
+          "options": {
+            "tsConfig": "./configs/tsconfig.spec.json"
+          }
+        },
+        "e2e": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "devServerTarget": "my-first-app:serve",
+            "project": "projects/my-first-app",
+            "browser": "chrome"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "my-first-app:serve:production"
+            }
+          }
+        },
+        "cypress-run": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "devServerTarget": "my-first-app:serve",
+            "project": "projects/my-first-app"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "my-first-app:serve:production"
+            }
+          }
+        },
+        "cypress-open": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "watch": true,
+            "headless": false,
+            "project": "projects/my-first-app"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/my-first-app//**/*.ts",
+              "projects/my-first-app//**/*.html"
+            ],
+            "eslintConfig": "projects/my-first-app/eslint.config.js"
+          }
+        }
+      }
+    },
+    "my-second-app": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "projects/my-second-app/",
+      "sourceRoot": "projects/my-second-app/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/my-second-app",
+            "index": "projects/my-second-app/src/index.html",
+            "main": "projects/my-second-app/src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "projects/my-second-app/tsconfig.app.json",
+            "assets": [
+              "projects/my-second-app/src/favicon.ico",
+              "projects/my-second-app/src/assets"
+            ],
+            "styles": [
+              "projects/my-second-app/src/styles.css"
+            ],
+            "scripts": [],
+            "vendorChunk": true,
+            "extractLicenses": false,
+            "buildOptimizer": false,
+            "sourceMap": true,
+            "optimization": false,
+            "namedChunks": true
+          },
+          "configurations": {
+            "production": {
+              "fileReplacements": [
+                {
+                  "replace": "projects/my-second-app/src/environments/environment.ts",
+                  "with": "projects/my-second-app/src/environments/environment.prod.ts"
+                }
+              ],
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "namedChunks": false,
+              "extractLicenses": true,
+              "vendorChunk": false,
+              "buildOptimizer": true,
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "2mb",
+                  "maximumError": "5mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb"
+                }
+              ]
+            }
+          }
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "buildTarget": "my-second-app:build"
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "my-second-app:build:production"
+            }
+          }
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "buildTarget": "my-second-app:build"
+          }
+        },
+        "test": {
+          "builder": "@angular-builders/jest:run",
+          "options": {
+            "zoneless": false
+          }
+        },
+        "e2e": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "devServerTarget": "my-second-app:serve",
+            "project": "projects/my-second-app",
+            "browser": "chrome"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "my-second-app:serve:production"
+            }
+          }
+        },
+        "cypress-run": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "devServerTarget": "my-second-app:serve",
+            "project": "projects/my-second-app"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "my-second-app:serve:production"
+            }
+          }
+        },
+        "cypress-open": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "watch": true,
+            "headless": false,
+            "project": "projects/my-second-app"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/my-second-app//**/*.ts",
+              "projects/my-second-app//**/*.html"
+            ],
+            "eslintConfig": "projects/my-second-app/eslint.config.js"
+          }
+        }
+      }
+    },
+    "my-shared-library": {
+      "projectType": "library",
+      "root": "projects/my-shared-library",
+      "sourceRoot": "projects/my-shared-library/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "tsConfig": "projects/my-shared-library/tsconfig.lib.json",
+            "project": "projects/my-shared-library/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/my-shared-library/tsconfig.lib.prod.json"
+            }
+          }
+        },
+        "test": {
+          "builder": "@angular-builders/jest:run"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/my-shared-library/**/*.ts",
+              "projects/my-shared-library/**/*.html"
+            ],
+            "eslintConfig": "projects/my-shared-library/eslint.config.js"
+          }
+        }
+      }
+    }
+  },
+  "cli": {
+    "packageManager": "yarn",
+    "analytics": false
+  },
+  "schematics": {
+    "@schematics/angular:component": {
+      "type": "component"
+    },
+    "@schematics/angular:directive": {
+      "type": "directive"
+    },
+    "@schematics/angular:service": {
+      "type": "service"
+    },
+    "@schematics/angular:guard": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:interceptor": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:module": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:pipe": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:resolver": {
+      "typeSeparator": "."
+    }
+  }
+}

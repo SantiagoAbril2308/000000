@@ -1,0 +1,217 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "sanity-esbuild-app": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-builders/custom-esbuild:application",
+          "options": {
+            "plugins": [
+              "esbuild/define-text-plugin.js",
+              {
+                "path": "esbuild/define-text-by-option-plugin.js",
+                "options": {
+                  "title": "sanity-esbuild-app optionTitle (compilation provided)"
+                }
+              }
+            ],
+            "outputPath": "dist/sanity-esbuild-app",
+            "index": "src/index.html",
+            "browser": "src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              "src/favicon.ico",
+              "src/assets"
+            ],
+            "styles": [
+              "src/styles.scss"
+            ],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kb",
+                  "maximumError": "4kb"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "esm": {
+              "plugins": [
+                "esbuild/define-text-plugin.mjs",
+                {
+                  "path": "esbuild/define-text-by-option-plugin.mjs",
+                  "options": {
+                    "title": "sanity-esbuild-app optionTitle (compilation provided)"
+                  }
+                }
+              ]
+            },
+            "cjs": {
+              "plugins": [
+                "esbuild/define-text-plugin.js",
+                {
+                  "path": "esbuild/define-text-by-option-plugin.js",
+                  "options": {
+                    "title": "sanity-esbuild-app optionTitle (compilation provided)"
+                  }
+                }
+              ]
+            },
+            "target-options-test": {
+              "plugins": [
+                "esbuild/define-configuration-plugin.js"
+              ],
+              "indexHtmlTransformer": "esbuild/configuration-transformer.js",
+              "optimization": false,
+              "outputHashing": "none"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-builders/custom-esbuild:dev-server",
+          "options": {
+            "buildTarget": "sanity-esbuild-app:build",
+            "port": 0
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "sanity-esbuild-app:build:production"
+            },
+            "esm": {
+              "buildTarget": "sanity-esbuild-app:build:esm",
+              "middlewares": [
+                "esbuild/send-hello-middleware.mjs"
+              ]
+            },
+            "cjs": {
+              "buildTarget": "sanity-esbuild-app:build:cjs",
+              "middlewares": [
+                "esbuild/send-hello-middleware.js"
+              ]
+            }
+          },
+          "defaultConfiguration": "cjs"
+        },
+        "test": {
+          "builder": "@angular-builders/custom-esbuild:unit-test",
+          "options": {
+            "buildTarget": "sanity-esbuild-app:build",
+            "tsConfig": "tsconfig.spec.json"
+          },
+          "configurations": {
+            "esm": {
+              "buildTarget": "sanity-esbuild-app:build:esm"
+            },
+            "cjs": {
+              "buildTarget": "sanity-esbuild-app:build:cjs"
+            }
+          },
+          "defaultConfiguration": "cjs"
+        },
+        "e2e": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "devServerTarget": "sanity-esbuild-app:serve",
+            "browser": "chrome"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "sanity-esbuild-app:serve:production"
+            },
+            "esm": {
+              "devServerTarget": "sanity-esbuild-app:serve:esm"
+            },
+            "cjs": {
+              "devServerTarget": "sanity-esbuild-app:serve:cjs"
+            }
+          }
+        },
+        "cypress-run": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "devServerTarget": "sanity-esbuild-app:serve"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "sanity-esbuild-app:serve:production"
+            }
+          }
+        },
+        "cypress-open": {
+          "builder": "@cypress/schematic:cypress",
+          "options": {
+            "watch": true,
+            "headless": false
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "cli": {
+    "analytics": false,
+    "packageManager": "yarn",
+    "schematicCollections": [
+      "angular-eslint"
+    ]
+  },
+  "schematics": {
+    "@schematics/angular:component": {
+      "type": "component"
+    },
+    "@schematics/angular:directive": {
+      "type": "directive"
+    },
+    "@schematics/angular:service": {
+      "type": "service"
+    },
+    "@schematics/angular:guard": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:interceptor": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:module": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:pipe": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:resolver": {
+      "typeSeparator": "."
+    }
+  }
+}

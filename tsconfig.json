@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "Node16",
+    "module": "Node16",
+    "target": "ES2022",
+    "lib": ["DOM", "ES2022"],
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "strictPropertyInitialization": false,
+    "strictNullChecks": false,
+    "pretty": true,
+    "sourceMap": true,
+    "declaration": true,
+    "stripInternal": true,
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules"],
+  "compileOnSave": false,
+  "buildOnSave": false
+}

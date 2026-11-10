@@ -1,0 +1,12 @@
+{
+  "name": "bazel-example",
+  "version": "",
+  "scripts": {
+    "build": "ng build"
+  },
+  "private": true,
+  "devDependencies": {
+    "@angular-builders/bazel": "workspace:*",
+    "@angular/cli": "22.2.3"
+  }
+}

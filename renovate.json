@@ -1,0 +1,62 @@
+{
+  "extends": [
+    ":dependencyDashboard",
+    ":prConcurrentLimit10",
+    "group:monorepos",
+    "group:recommended",
+    "workarounds:all"
+  ],
+  "prHourlyLimit": 3,
+  "rebaseWhen": "behind-base-branch",
+  "updateInternalDeps": true,
+  "postUpdateOptions": ["yarnDedupeHighest"],
+  "packageRules": [
+    {
+      "matchPaths": ["packages/**"],
+      "rangeStrategy": "replace"
+    },
+    {
+      "description": "Pin every example dependency to an exact version. Examples are test fixtures, not published packages, so they must resolve deterministically. A loose range here (e.g. bazel's `@angular/cli: \"22\"`) is pinned to the *currently-resolved* version on the next run instead of bumped to latest — so that one example lags every other by a patch and fragments the dep tree (duplicate @angular-devkit/architect). This broke CI and required #2307; the recurrence source (the `yarn add` path in scripts/update-example.js) now pins with `--exact`. Keep example specs exact so this rule only ever has to maintain pins, never repair loose ranges.",
+      "matchPaths": ["examples/**"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    },
+    {
+      "description": "Track GitHub-hosted runner image versions (runs-on), but never auto-merge them - a runner bump can change the CI environment and must be reviewed/tested.",
+      "matchDatasources": ["github-runners"],
+      "automerge": false
+    },
+    {
+      "description": "Hold TypeScript majors until Angular CLI's supported versions catch up — see #2123.",
+      "matchPackageNames": ["typescript"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Hold jasmine-core majors until zone.js supports them. jasmine-core 7 blocks monkey patching, and zone.js/testing (which Angular's Karma builder always loads) still patches jasmine.getEnv().describe/it, so every Karma example dies with 'Cannot assign to read only property describe' (see #2394). Angular and Angular CLI still pin jasmine-core 6.3. Lift this once a zone.js release patches jasmine 7.",
+      "matchPackageNames": ["jasmine-core"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "@angular-devkit/architect uses Angular's 0.{major}{minor}.{patch} scheme (0.2102 = v21.2). Renovate treats the leading 0 as the major, so a v21->v22 bump (0.2102 -> 0.2200) looks like a minor and slips past major-hold rules — it gets bundled into routine patch PRs and fragments the dep tree (see #2263). Reinterpret the real Angular major via regex versioning.",
+      "matchPackageNames": ["@angular-devkit/architect"],
+      "versioning": "regex:^0\\.(?<major>\\d{2})(?<minor>\\d{2})\\.(?<patch>\\d+)$"
+    },
+    {
+      "description": "Hold @angular-devkit/architect Angular-major bumps until the builders move that major — same policy as the TypeScript-major hold above. See #2263.",
+      "matchPackageNames": ["@angular-devkit/architect"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Angular framework (@angular/*) and Angular CLI (@angular/cli + @angular-devkit/*) ship on the same version train and must move together. Renovate's monorepo presets put them in two separate groups, so one can merge ahead of the other — that leaves @angular-devkit/core resolved at two versions at once, its Logger class gets two distinct identities, and custom-esbuild fails to compile ('_subject is protected but type Logger is not a class derived from Logger'). This is what broke the standalone angular-cli-monorepo patch bump in #2299. Group both scopes into one PR so the whole Angular tree always bumps atomically. (The architect major-hold above still applies — majors remain a deliberate manual step via the update workflow.)",
+      "groupName": "angular",
+      "matchPackageNames": ["@angular/**", "@angular-devkit/**"]
+    }
+  ]
+}
